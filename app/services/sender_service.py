@@ -166,6 +166,19 @@ class SenderService:
         session = SenderSessionModel.model_validate(data)
         if not secrets_match(sender_secret, session.sender_secret):
             raise UnauthorizedException()
+        if session.status == "attached":
+            # A retry after a successful attach is not a conflict. The first
+            # wrap is kept so a receiver that already collected it is not
+            # invalidated by a fresh ephemeral wrap of the same transfer.
+            if session.transfer_id == transfer_id:
+                return {
+                    "session_id": session.session_id,
+                    "status": session.status,
+                    "expires_in": await self._ttl(session_id),
+                }
+            raise TransferNotReadyException(
+                "This session is already attached to another transfer"
+            )
         if session.status != "joined":
             if session.status == "waiting":
                 raise TransferNotReadyException("No receiver has joined this session")

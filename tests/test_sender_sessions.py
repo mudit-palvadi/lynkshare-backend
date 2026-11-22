@@ -321,7 +321,27 @@ class TestAttachTransfer:
                 sender_secret=created["sender_secret"],
             )
 
-    async def test_attaching_twice_is_refused(self, fake_redis):
+    async def test_attaching_twice_is_idempotent(self, fake_redis):
+        created = await self._joined()
+        await _seed_transfer()
+        first = await _service().attach_transfer(
+            created["session_id"],
+            "transfer-1",
+            WRAPPED,
+            sender_secret=created["sender_secret"],
+        )
+
+        again = await _service().attach_transfer(
+            created["session_id"],
+            "transfer-1",
+            "a-different-wrap-of-the-same-key",
+            sender_secret=created["sender_secret"],
+        )
+
+        assert first["status"] == "attached"
+        assert again["status"] == "attached"
+
+    async def test_attaching_to_a_different_transfer_is_refused(self, fake_redis):
         created = await self._joined()
         await _seed_transfer()
         await _service().attach_transfer(
@@ -334,7 +354,7 @@ class TestAttachTransfer:
         with pytest.raises(TransferNotReadyException):
             await _service().attach_transfer(
                 created["session_id"],
-                "transfer-1",
+                "transfer-2",
                 WRAPPED,
                 sender_secret=created["sender_secret"],
             )

@@ -194,14 +194,32 @@ async def test_a_second_attach_cannot_replace_or_restore_the_key(fake_redis):
     )
     await service.attach_transfer(created["session_id"], "t-1", "first-key")
 
-    with pytest.raises(TransferNotReadyException):
-        await service.attach_transfer(created["session_id"], "t-1", "other-key")
+    # A fresh ephemeral wrap of the same transfer is a retry, not a conflict.
+    await service.attach_transfer(created["session_id"], "t-1", "other-key")
 
     delivered = await service.get_receiver_session(created["session_id"])
     assert delivered["wrapped_key"] == "first-key"
 
+    # The same transfer can be attached again after the key was collected.
+    await service.attach_transfer(created["session_id"], "t-1", "first-key")
+
     with pytest.raises(TransferNotReadyException):
-        await service.attach_transfer(created["session_id"], "t-1", "first-key")
+        await fake_redis.set(
+            "lynk:transfer:t-2",
+            json.dumps(
+                {
+                    "transfer_id": "t-2",
+                    "status": "ready",
+                    "created_at": "2026-10-27T00:00:00+00:00",
+                    "expires_at": "2026-10-27T00:10:00+00:00",
+                    "total_files": 1,
+                    "total_size": 1,
+                    "files": [],
+                }
+            ),
+            ex=60,
+        )
+        await service.attach_transfer(created["session_id"], "t-2", "first-key")
 
     stored = json.loads(
         await fake_redis.get(redis_service._get_receiver_key(created["session_id"]))

@@ -72,12 +72,14 @@ class ReceiverService:
 
         def mutate(data: dict) -> dict:
             session = ReceiverSessionModel.model_validate(data)
-            current = session.wrapped_key or ""
             if session.status == "attached":
-                # A second writer must not replace the key, and a key that was
-                # already taken must not be written back from a stale copy.
-                if session.transfer_id != transfer_id or (incoming and incoming != current):
-                    raise TransferNotReadyException("Receiver session is already attached")
+                # A duplicate attach for the same transfer is a retry, not a
+                # conflict. Keep the first wrapped key: a fresh ephemeral wrap
+                # is equivalent, and a receiver may already have collected it.
+                if session.transfer_id != transfer_id:
+                    raise TransferNotReadyException(
+                        "Receiver session is already attached to another transfer"
+                    )
                 return data
             if session.status != "waiting":
                 raise TransferNotReadyException("Receiver session is already attached")
