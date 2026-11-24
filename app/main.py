@@ -70,7 +70,8 @@ async def lifespan(app: FastAPI):
     else:
         set_session_validator(None)
     # A room is not enough: the socket must also present the transfer's access
-    # token (#32). Off by default until every client sends the auth frame.
+    # token (#32). On by default; set it false only to serve a client build
+    # that predates the auth frame.
     if settings.SIGNALING_REQUIRE_ACCESS:
         set_access_validator(_signaling_access_valid)
     else:

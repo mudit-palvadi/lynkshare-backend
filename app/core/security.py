@@ -38,7 +38,6 @@ return {count, ttl}
 # Parsed once at import: the list is small and static, and the limiter runs on
 # every protected request.
 SENDER_SECRET_HEADER = "X-Lynk-Sender-Secret"
-ACCESS_TOKEN_HEADER = "X-Lynk-Access-Token"
 RECEIVER_SECRET_HEADER = "X-Lynk-Receiver-Secret"
 EDGE_SECRET_HEADER = "X-Lynk-Edge-Secret"
 
