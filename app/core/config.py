@@ -46,8 +46,6 @@ def _is_local_origin(origin: str) -> bool:
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
-    PORT: int = 8000
-    HOST: str = "0.0.0.0"
 
     REDIS_URL: str = "redis://localhost:6379/0"
 
